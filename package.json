@@ -9,7 +9,9 @@
     "seed": "node prisma/seed.ts"
   },
   "dependencies": {
-    "elysia": "latest"
+    "@prisma/client": "^5.4.2",
+    "elysia": "latest",
+    "feed": "^4.2.2"
   },
   "devDependencies": {
     "bun-types": "latest",
