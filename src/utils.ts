@@ -57,7 +57,7 @@ const findFromDB = async (query: any, imdb_ids?: any) => {
     const torrent_filters: any = [
         { quality: { search: quality, mode: 'insensitive' } },
         { video_codec: { search: video_codec, mode: 'insensitive' } },
-        { type: { search: type, mode: 'insensitive' } }
+        { type: { search: type === 'best' ? undefined : type, mode: 'insensitive' } }
     ]
 
     if (filters.length) {
@@ -76,7 +76,11 @@ const findFromDB = async (query: any, imdb_ids?: any) => {
                     },
                     where: {
                         AND: torrent_filters
-                    }
+                    },
+                    orderBy: {
+                        type: 'asc'
+                    },
+                    take: type === 'best' ? 1 : undefined
                 },
                 genre: {
                     select: {
