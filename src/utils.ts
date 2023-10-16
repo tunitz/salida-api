@@ -14,11 +14,11 @@ const TRACKERS = [
     'tr=udp://p4p.arenabg.com:1337',
     'tr=udp://tracker.leechers-paradise.org:6969'
 ]
-const BUILD_MAGNET = (hash:string, name:string) => `magnet:?xt=urn:btih:${hash}&dn=${name}&${TRACKERS.join('&')}`
+const BUILD_MAGNET = (hash: string, name: string) => `magnet:?xt=urn:btih:${hash}&dn=${name}&${TRACKERS.join('&')}`
 
-const fetchFromDB = async (movie_list:any = [], query:any = {}) => {
-    const movie_ids = movie_list.results.map((movie:any) => movie.id)
-    const imdb_ids = await movie_ids.reduce(async (list:string[], current:number) => {
+const fetchFromDB = async (movie_list: any = {}, query: any = {}) => {
+    const movie_ids = movie_list.results.map((movie: any) => movie.id)
+    const imdb_ids = await movie_ids.reduce(async (list: string[], current: number) => {
         const imdb_code = await getImdbCode(current)
         const all = await list
         if (imdb_code) return [...all, imdb_code]
@@ -28,14 +28,14 @@ const fetchFromDB = async (movie_list:any = [], query:any = {}) => {
     return await findFromDB(query, imdb_ids)
 }
 
-const findFromDB = async (query:any, imdb_ids?:any) => {
-    const { title, year, genre, rating, quality, video_codec, type, media_type, exclude_genre} = query
+const findFromDB = async (query: any, imdb_ids?: any) => {
+    const { title, year, genre, rating, quality, video_codec, type, media_type, exclude_genre } = query
 
-    const filters:any = [
+    const filters: any = [
         { title: { search: title, mode: 'insensitive' } },
-        { imdb_code: { in: imdb_ids?.length? imdb_ids : undefined }},
+        { imdb_code: { in: imdb_ids?.length ? imdb_ids : undefined } },
         { year: Number(year) || undefined },
-        { rating: { gte: Number(rating) || undefined }},
+        { rating: { gte: Number(rating) || undefined } },
         { media_type: { search: media_type, mode: 'insensitive' } },
         {
             genre: {
@@ -54,14 +54,14 @@ const findFromDB = async (query:any, imdb_ids?:any) => {
         },
     ]
 
-    const torrent_filters:any = [
+    const torrent_filters: any = [
         { quality: { search: quality, mode: 'insensitive' } },
         { video_codec: { search: video_codec, mode: 'insensitive' } },
         { type: { search: type, mode: 'insensitive' } }
     ]
 
     if (filters.length) {
-        return await db.movie.findMany({
+        const movies = await db.movie.findMany({
             where: {
                 AND: filters
             },
@@ -71,21 +71,69 @@ const findFromDB = async (query:any, imdb_ids?:any) => {
                         hash: true,
                         quality: true,
                         type: true,
-                        video_codec: true
+                        video_codec: true,
+                        size: true
                     },
                     where: {
                         AND: torrent_filters
                     }
                 },
-                genre: true
+                genre: {
+                    select: {
+                        name: true
+                    }
+                }
             },
+        })
+
+        return movies.map(movie => {
+            movie.torrents.map(torrent => {
+                torrent.size_convert = bytesToSize(Number(torrent.size))
+                delete torrent.size
+                return torrent
+            })
+            return movie
         })
     } else return []
 }
 
-const description = (torrent:any, poster:string, title:string) => {
+function bytesToSize(bytes: number, decimals = 2) {
+    if (!Number(bytes)) {
+        return '0 Bytes';
+    }
+
+    const kbToBytes = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = [
+        'Bytes',
+        'KiB',
+        'MiB',
+        'GiB',
+        'TiB',
+        'PiB',
+        'EiB',
+        'ZiB',
+        'YiB',
+    ];
+
+    const index = Math.floor(
+        Math.log(bytes) / Math.log(kbToBytes),
+    );
+
+    return `${parseFloat(
+        (bytes / Math.pow(kbToBytes, index)).toFixed(dm),
+    )} ${sizes[index]}`;
+}
+
+const description = (torrent: any, poster: string, title: string, rating: number, genre: any = []) => {
     return `
         <img src="${poster}" alt="${title} width="100" height="200">
+        <br/>
+        <span><b>Size</b>: ${torrent.size_convert}</span>
+        <br/>
+        <span><b>Genre</b>: ${genre.map((m: any) => m.name).join(', ')}</span>
+        <br/>
+        <span><b>Rating</b>: ${rating}</span>
         <br/>
         <span><b>Quality</b>: ${torrent.quality}</span>
         <br/>
@@ -95,7 +143,7 @@ const description = (torrent:any, poster:string, title:string) => {
     `
 }
 
-const buildRSS = (movie_list:any) => {
+const buildRSS = (movie_list: any) => {
     const feed = new Feed({
         title: "Salida RSS",
         description: "RSS feed for Salida",
@@ -107,13 +155,13 @@ const buildRSS = (movie_list:any) => {
         generator: "salida-rss", // optional, default = 'Feed for Node.js'
     });
 
-    movie_list.forEach((movie:any) => {
-        movie.torrents.forEach((torrent:any) => {
+    movie_list.forEach((movie: any) => {
+        movie.torrents.forEach((torrent: any) => {
             feed.addItem({
                 title: movie.title,
                 link: BUILD_MAGNET(torrent.hash, movie.slug),
-                description: description(torrent, movie.poster, movie.title),
-                date: torrent.created_date,
+                description: description(torrent, movie.poster, movie.title, movie.rating, movie.genre),
+                date: movie.release_date,
                 image: movie.poster
             })
         })
