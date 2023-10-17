@@ -39,6 +39,13 @@ const getTopRated = async (page:number = 1, language:string = 'en-US') => {
     return await res.json()
 }
 
+const getMovieDetails = async (movie_id:number = 1, language:string = 'en-US') => {
+    const res = await BUILD_URL(`/movie/${movie_id}?language=${language}`);
+    if (!res.ok) return null
+
+    return await res.json()
+}
+
 const getImdbCode = async (movie_id:number = 1, language:string = 'en-US') => {
     const res = await BUILD_URL(`/movie/${movie_id}?append_to_response=external_ids&language=${language}`);
     if (!res.ok) return null
@@ -47,4 +54,4 @@ const getImdbCode = async (movie_id:number = 1, language:string = 'en-US') => {
     return data.imdb_id ? data.imdb_id : null
 }
 
-export { getNowPlaying, getPopular, getTopRated, getImdbCode }
+export { getNowPlaying, getPopular, getTopRated, getImdbCode, getMovieDetails }
