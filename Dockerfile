@@ -11,7 +11,7 @@ ENV NODE_ENV production
 
 COPY package.json ./
 COPY bun.lockb ./
-COPY src ./
+COPY src src
 # COPY prisma ./
 
 RUN bun install --ci
