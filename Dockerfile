@@ -12,10 +12,10 @@ ENV NODE_ENV production
 COPY package.json ./
 COPY bun.lockb ./
 COPY src ./
-COPY prisma ./
+# COPY prisma ./
 
 RUN bun install --ci
-RUN bunx prisma generate
+# RUN bunx prisma generate
 
 CMD ["bun", "src/index.ts"]
 
