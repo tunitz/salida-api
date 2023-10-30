@@ -1,9 +1,10 @@
 # syntax=docker/dockerfile:1
-FROM oven/bun:latest as base
+# FROM oven/bun:latest as base
+FROM oven/bun:latest
 
 WORKDIR /app
 
-ENV NODE_ENV production
+# ENV NODE_ENV production
 
 # RUN apt-get update && apt-get install -y curl
 # RUN curl -sL https://deb.nodesource.com/setup_18.x | bash - 
